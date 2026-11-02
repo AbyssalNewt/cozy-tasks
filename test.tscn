@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bbpu62dm1yf2b"]
+
+[ext_resource type="Script" uid="uid://bc0lv60ffhb3r" path="res://AnimationTest.cs" id="1_37kl0"]
+
+[node name="Node2D" type="Node2D" unique_id=2081257889]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=701303568]
+script = ExtResource("1_37kl0")
