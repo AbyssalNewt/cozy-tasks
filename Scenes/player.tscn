@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://c2d6mxnnxu0uk"]
+
+[ext_resource type="Script" uid="uid://bwoend6vjgerb" path="res://Scripts/Player.cs" id="1_v0iea"]
+[ext_resource type="Script" uid="uid://xttx7en41n2u" path="res://Scripts/AppearanceController.cs" id="2_cvnsp"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_vgqql"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cvnsp"]
+size = Vector2(24, 10)
+
+[node name="Player" type="Node2D" unique_id=403153313]
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1711769221]
+script = ExtResource("1_v0iea")
+
+[node name="Appearance" type="Node2D" parent="Player" unique_id=1737545598]
+script = ExtResource("2_cvnsp")
+BodyPath = "uid://cxg1jsf8v3tdi"
+EyesPath = "uid://dulonxvs4cnu8"
+OutfitPath = "uid://irngbu2ohfil"
+HairstylePath = "uid://cm071ro35aofs"
+
+[node name="Body" type="AnimatedSprite2D" parent="Player/Appearance" unique_id=396841794]
+sprite_frames = SubResource("SpriteFrames_vgqql")
+
+[node name="Eyes" type="AnimatedSprite2D" parent="Player/Appearance" unique_id=1467848998]
+
+[node name="Outfit" type="AnimatedSprite2D" parent="Player/Appearance" unique_id=867910463]
+
+[node name="Hairstyle" type="AnimatedSprite2D" parent="Player/Appearance" unique_id=493349938]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=660772573]
+modulate = Color(0.19607843, 0.19607843, 1, 1)
+self_modulate = Color(0, 0, 1, 1)
+position = Vector2(0, 42)
+shape = SubResource("RectangleShape2D_cvnsp")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=852348704]
