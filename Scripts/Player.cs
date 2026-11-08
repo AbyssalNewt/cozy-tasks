@@ -12,18 +12,6 @@ public partial class Player : CharacterBody2D
 	// Direction the player continues facing after they stop moving.
 	private string _facingDirection = "down";
 
-	/*public override void _Ready()
-	{
-		_appearance = GetNode<AnimatedSprite2D>("AnimatedSprite2D");
-
-		_appearance.SpriteFrames =
-			AnimationLoader.CreateAnimations(
-				"res://moderninteriors-win/2_Characters/Character_Generator/Bodies/48x48/Body_48x48_01.png"
-			);
-
-		_appearance.Play("stand_down");
-	}
-	*/
 	public override void _Ready()
 	{
 		_appearance =
