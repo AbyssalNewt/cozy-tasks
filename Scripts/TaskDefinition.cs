@@ -15,6 +15,7 @@ public partial class TaskDefinition
 	public TimeSpan Duration { get; set; }
 	public RecurrenceRule? Rule { get; set; }
 	public bool IsScheduled { get; set; }
+	
 
 	public TaskDefinition(string title,  string description, string icon, List<TimeSpan> times, 
 		TimeSpan duration, bool isScheduled, RecurrencePattern pattern = RecurrencePattern.None, 
@@ -27,11 +28,14 @@ public partial class TaskDefinition
 		Duration = duration;
 
 		IsScheduled = isScheduled;
+		
 		if (IsScheduled && startDate != null && endDate != null && weekdays != null)
+			//If the task was given a recurrence rule with a defined end date...
 		{
 			Rule = new RecurrenceRule(pattern, weekdays, times, startDate.Value,  endDate.Value);
 		}
 		else if (IsScheduled && startDate != null && weekdays != null)
+			//If the task was given a recurrence rule with no defined end date...
 		{
 			Rule = new RecurrenceRule(pattern, weekdays, times, startDate.Value);
 		}
