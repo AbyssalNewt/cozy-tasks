@@ -1,11 +1,11 @@
 [gd_scene format=4 uid="uid://bjeqoueykv0db"]
 
 [ext_resource type="TileSet" uid="uid://drgpspit7jhy2" path="res://RoomTileSet.tres" id="1_lio24"]
-[ext_resource type="Script" uid="uid://dsi1g21kno7pj" path="res://PlacementManager.cs" id="2_15fr2"]
-[ext_resource type="Script" uid="uid://bcj2x3kyxll7n" path="res://FurniturePlacementController.cs" id="3_3cdcv"]
+[ext_resource type="Script" uid="uid://dsi1g21kno7pj" path="res://Scripts/PlacementManager.cs" id="2_15fr2"]
+[ext_resource type="Script" uid="uid://bcj2x3kyxll7n" path="res://Scripts/FurniturePlacementController.cs" id="3_3cdcv"]
 [ext_resource type="PackedScene" uid="uid://c2d6mxnnxu0uk" path="res://Scenes/player.tscn" id="3_nnote"]
-[ext_resource type="PackedScene" uid="uid://dnwqvqrknfs1" path="res://furniture.tscn" id="4_acr7p"]
-[ext_resource type="Script" uid="uid://523hbdjerde8" path="res://FurnitureCatalog.cs" id="6_um27s"]
+[ext_resource type="PackedScene" uid="uid://dnwqvqrknfs1" path="res://Scenes/furniture.tscn" id="4_acr7p"]
+[ext_resource type="Script" uid="uid://523hbdjerde8" path="res://Scripts/FurnitureCatalog.cs" id="6_um27s"]
 
 [node name="SmallHouse" type="Node2D" unique_id=732616647]
 position = Vector2(8, -24)

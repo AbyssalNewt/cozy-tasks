@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dnwqvqrknfs1"]
 
-[ext_resource type="Script" uid="uid://bc1j7x648evw7" path="res://Furniture.cs" id="1_fugw3"]
+[ext_resource type="Script" uid="uid://bc1j7x648evw7" path="res://Scripts/Furniture.cs" id="1_fugw3"]
 
 [node name="Furniture" type="Node2D" unique_id=1750988831]
 script = ExtResource("1_fugw3")
