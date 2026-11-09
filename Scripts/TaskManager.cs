@@ -27,6 +27,19 @@ public partial class TaskManager : Node
 	/// </summary>
 	private Dictionary<(Guid DefinitionId, DateTime Date), TaskInstanceState> _instanceStates = new();
 
+	/// <summary>
+	/// Creates a task definition and emits TasksUpdated.
+	/// </summary>
+	/// <param name="title"></param>
+	/// <param name="description"></param>
+	/// <param name="icon"></param>
+	/// <param name="times"></param>
+	/// <param name="duration"></param>
+	/// <param name="isScheduled"></param>
+	/// <param name="pattern"></param>
+	/// <param name="startDate"></param>
+	/// <param name="endDate"></param>
+	/// <param name="weekdays"></param>
 	public void CreateTask(string title,  string description, string icon, List<TimeSpan> times, 
 		TimeSpan duration, bool isScheduled, RecurrencePattern pattern = RecurrencePattern.None, 
 		DateTime? startDate = null, DateTime? endDate = null, List<DayOfWeek>? weekdays = null)
@@ -37,6 +50,22 @@ public partial class TaskManager : Node
 		
 		//Need async database state changing to happen here
 		
+		EmitSignal(SignalName.TasksUpdated);
+	}
+	
+	/// <summary>
+	///Creates a new TaskInstanceState (if necessary) for a given task instance and writes it to the instance dict
+	/// </summary>
+	public void SetTaskCompleted(Guid definitionId, DateTime date)
+	{
+		var key = (definitionId, date.Date);
+		if (!_instanceStates.TryGetValue(key, out TaskInstanceState value))
+		{
+			value = new TaskInstanceState();
+			_instanceStates[key] = value;
+		}
+
+		value.IsCompleted = !(value.IsCompleted);
 		EmitSignal(SignalName.TasksUpdated);
 	}
 	
@@ -100,20 +129,7 @@ public partial class TaskManager : Node
 		};
 	}
 
-	/// <summary>
-	///Creates a new TaskInstanceState (if necessary) for a given task instance and writes it to the instance dict
-	/// </summary>
-	public void SetTaskCompleted(Guid definitionId, DateTime date)
-	{
-		var key = (definitionId, date.Date);
-		if (!_instanceStates.TryGetValue(key, out TaskInstanceState value))
-		{
-            value = new TaskInstanceState();
-            _instanceStates[key] = value;
-		}
-
-        value.IsCompleted = !(value.IsCompleted);
-	}
+	
 }
 /// <summary>
 /// Contains altered state data of an instance of a task. Subject to expansion.
