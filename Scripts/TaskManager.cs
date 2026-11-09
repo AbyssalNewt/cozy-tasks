@@ -87,6 +87,18 @@ public partial class TaskManager : Node
 
 		EmitSignal(SignalName.TasksUpdated);
 	}
+
+	public void RescheduleTaskInstance(Guid taskId, DateTime oldDate, DateTime newDate)
+	{
+		var task = _definitions[taskId];
+		if (task.Rule == null) return; //this should not happen
+
+		task.Rule.RescheduledDates[oldDate] = newDate;
+		
+		//need async database state changing to happen here
+		
+		EmitSignal(SignalName.TasksUpdated);
+	}
 	
 	/// <summary>
 	///Creates a new TaskInstanceState (if necessary) for a given task instance and writes it to the instance dict
