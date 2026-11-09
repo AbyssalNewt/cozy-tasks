@@ -34,8 +34,8 @@ public partial class PlacementManager : Node
 	{
 		return Walls.GetCellSourceId(cell) != -1;
 	}
-
-	// Check whether furniture can occupy a region.
+	
+	
 	public bool CanPlace(Vector2I origin, Vector2I size)
 	{
 		if (size.X <= 0 || size.Y <= 0)
@@ -50,9 +50,6 @@ public partial class PlacementManager : Node
 				if (!HasFloor(cell))
 					return false;
 
-				if (HasWall(cell))
-					return false;
-
 				if (occupiedCells.Contains(cell))
 					return false;
 			}
@@ -60,6 +57,7 @@ public partial class PlacementManager : Node
 
 		return true;
 	}
+
 	
 	public Vector2 GetFurnitureCenter(Vector2I origin,Vector2I size)
 	{
@@ -79,6 +77,23 @@ public partial class PlacementManager : Node
 			{
 				occupiedCells.Add(origin + new Vector2I(x, y));
 			}
+		}
+	}
+	
+	public override void _Ready()
+	{
+		if (Floor == null)
+		{
+			GD.PushError(
+	            "PlacementManager: Floor TileMapLayer is not assigned!"
+			);
+		}
+
+		if (Walls == null)
+		{
+			GD.PushError(
+	            "PlacementManager: Walls TileMapLayer is not assigned!"
+			);
 		}
 	}
 
