@@ -72,6 +72,23 @@ public partial class TaskManager : Node
 	}
 	
 	/// <summary>
+	/// Cancels an instance of a task, causing it not to appear on the calendar when GetMonthViewInstances is called.
+	/// SHOULD NOT be called with a task that has no recurrence rule.
+	/// </summary>
+	/// <param name="taskId"></param>
+	/// <param name="excludedDate"></param>
+	public void CancelTaskInstance(Guid taskId, DateTime excludedDate)
+	{
+		var task = _definitions[taskId];
+		if (task.Rule == null) return;
+		task.Rule.ExcludedDates.Add(excludedDate);
+		
+		// Need async database state changing to happen here
+
+		EmitSignal(SignalName.TasksUpdated);
+	}
+	
+	/// <summary>
 	///Creates a new TaskInstanceState (if necessary) for a given task instance and writes it to the instance dict
 	/// </summary>
 	public void SetTaskCompleted(Guid definitionId, DateTime date)
