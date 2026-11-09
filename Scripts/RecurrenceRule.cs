@@ -2,6 +2,8 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+namespace Cozytasks.Scripts;
+
 public enum RecurrencePattern
 {
 	None,
@@ -9,10 +11,20 @@ public enum RecurrencePattern
 	Weekly,
 	Monthly
 }
-
+#nullable enable
 public class RecurrenceRule
 {
-	public RecurrencePattern Pattern { get; set; } = RecurrencePattern.None;	//recurrence category
+	public RecurrenceRule(RecurrencePattern pattern, List<DayOfWeek> weekDays, 
+		List<TimeSpan> times, DateTime startDate, DateTime? endDate = null)
+	{
+		StartDate = startDate;
+		EndDate = endDate;
+		Pattern = pattern;
+		AllowedDays = weekDays;
+		Times = times;
+	}
+	
+	public RecurrencePattern Pattern { get; set; }	//recurrence category
 	public List<DayOfWeek> AllowedDays { get; set; } = [];	//days of the week which a task occurs
 	public DateTime StartDate { get; set; } //the starting window of a scheduled task, doesn't need HR:MIN:SEC
 	public DateTime? EndDate { get; set; } //the date-wise ending window of a scheduled task
