@@ -141,12 +141,13 @@ public partial class TaskManager : Node
 					viewModels.Add(CreateViewModel(def, taskTime));
 				}
 			}
-
+			
 			// 2. Inject rescheduled instances
 			foreach (var (originalDate, newDate) in def.Rule.RescheduledDates)
 			{
-				//ensure only view models for the current month are injected
-				if (newDate >= monthStart && newDate <= monthEnd)
+				//ensure only view models for the current month are injected, and only if they are still
+				//valid (in case the RuleDefinition is decommissioned)
+				if (newDate <= def.Rule.EndDate && newDate >= monthStart && newDate <= monthEnd)
 				{
 					viewModels.Add(CreateViewModel(def, newDate, isRescheduled: true));
 				}
