@@ -52,6 +52,24 @@ public partial class TaskManager : Node
 		
 		EmitSignal(SignalName.TasksUpdated);
 	}
+	/// <summary>
+	/// Prevents the task manager from generating future virtual tasks from a scheduled recurring task beyond
+	/// the set time (if applicable). Intended to terminate a recurring task while keeping record of past instances.
+	/// </summary>
+	/// <param name="taskId"></param>
+	/// <param name="ending"></param>
+	public void DiscontinueTask(Guid taskId, DateTime? ending = null)
+	{
+		
+		TaskDefinition deadTask =  _definitions[taskId];
+		if (deadTask.Rule == null) return; //This should not happen, but the IDE was complaining.
+		
+		deadTask.Rule.EndDate = ending ?? DateTime.Now;
+		
+		// Need async database state changing to happen here
+		
+		EmitSignal(SignalName.TasksUpdated);
+	}
 	
 	/// <summary>
 	///Creates a new TaskInstanceState (if necessary) for a given task instance and writes it to the instance dict
@@ -66,6 +84,9 @@ public partial class TaskManager : Node
 		}
 
 		value.IsCompleted = !(value.IsCompleted);
+		
+		// Need async database state changing to happen here
+		
 		EmitSignal(SignalName.TasksUpdated);
 	}
 	
