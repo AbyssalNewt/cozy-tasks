@@ -1,0 +1,446 @@
+create table public.profiles (
+  --This is for adults and the kids with their own id
+  id  uuid primary key default gen_random_uuid(),
+  display_name text not null check (length(trim(display_name)) between 1 and 40),
+  avatar text,
+  account_type text not null default 'adult' check(account_type in ('adult', 'child')),
+  has_login boolean not null default true, -- false if its a child profile that is made by an adult.
+  friend_code text unique,  --the friends code only can be by adults, change later to child if we also want for them to have
+  created_by  uuid references public.profiles(id) on delete set null,
+  xp int not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+create table public.households(
+  id  uuid primary key default gen_random_uuid(),
+  name  text not null,
+  invite_code text not null unique default upper(substr(md5(random()::text),1, 6)),
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at  timestamptz not null default now()
+
+);
+create table public.household_members(
+  household_id  uuid not null references public.households(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  role  text not null default 'member' check (role in('admin','member')),
+  joined_at timestamptz not null default now(),
+  primary key (household_id, user_id)
+);
+create table public.friendships(
+  id  uuid primary key default gen_random_uuid(),
+  requester uuid not null references public.profiles(id) on delete cascade,
+  addressee uuid not null references public.profiles(id) on delete cascade,
+  status  text not null default 'pending' check(status in ('pending', 'accepted')),
+  created_at  timestamptz not null default now(),
+  check (requester <> addressee)
+);
+create unique index friendships_pair on public.friendships(least(requester, addressee), greatest(requester, addressee));
+--ok so that should do for the friends, household, adult and child users 
+
+create table public.tasks(
+  id  uuid primary key default gen_random_uuid(),
+  owner_id  uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  household_id  uuid references public.households(id) on delete cascade, --fixing typos all around sigh.... 
+  visibility  text not null default 'individual' check(visibility in('individual', 'friends', 'public')),
+  assigned_to uuid references public.profiles(id) on delete set null, --null means anyone on the house
+  --task description 
+  title text not null check (length(trim(title)) > 0),
+  description text,
+  xp_reward int not null default 10 check(xp_reward between 0 and 100),
+  duration_minutes int not null default 0 check (duration_minutes >= 0),
+
+  recurrence  text not null default 'none' check (recurrence in('none', 'daily','weekly','monthly')),
+  allowed_days  smallint[] not null default '{}'
+  check(allowed_days <@ array[0,1,2,3,4,5,6]::smallint[]),
+  start_date  date not null default current_date,
+  end_date  date,
+  excluded_dates  date[] not null default '{}',
+  rescheduled_dates jsonb  not null default '{}'                 
+  check (jsonb_typeof(rescheduled_dates) = 'object'),            
+ 
+  created_at  timestamptz not null default now(),
+  check (end_date is null or end_date >= start_date)
+);
+ 
+create table public.task_completions (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  occurrence_date date not null,   -- which day's instance
+  profile_id  uuid not null references public.profiles(id) on delete cascade,  -- who gets the XP
+  household_id uuid references public.households(id) on delete cascade,
+  xp_earned  int  not null,
+  completed_at timestamptz not null default now(),
+  unique (task_id, occurrence_date)
+);
+ 
+create index on public.household_members (user_id);
+create index on public.tasks (household_id);
+create index on public.tasks (owner_id);
+create index on public.tasks (assigned_to);
+create index on public.tasks (visibility) where visibility <> 'individual';
+create index on public.task_completions (household_id, completed_at desc);
+create index on public.task_completions (profile_id);
+--ok now for the profiles for the sign ups
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare t text := coalesce(new.raw_user_meta_data ->> 'account_type', 'adult');
+begin
+  if t not in ('adult', 'child') then t := 'adult'; end if;
+  insert into public.profiles (id, display_name, account_type, has_login, friend_code)
+  values (
+    new.id,
+	left(coalesce(nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
+		split_part(new.email, '@', 1)), 40),
+    t,
+    true,
+	case when t = 'adult'
+      then upper(substr(md5(random()::text || clock_timestamp()::text), 1, 8)) end
+  );
+  return new;
+end;
+$$;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+create or replace function public.handle_deleted_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.profiles where id = old.id;
+  return old;
+end;
+$$; 
+create trigger on_auth_user_deleted
+  after delete on auth.users
+  for each row execute function public.handle_deleted_user(); 
+-- Is the logged-in user in this home?
+create or replace function public.is_member(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from household_members
+    where household_id = hid and user_id = auth.uid());
+$$;
+create or replace function public.is_admin(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from household_members
+	where household_id = hid and user_id = auth.uid() and role = 'admin');
+$$; 
+create or replace function public.is_adult_profile(pid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from profiles where id = pid and account_type = 'adult');
+$$;
+-- Is the logged-in user an ADULT member of this home?
+create or replace function public.is_adult_in(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_member(hid) and public.is_adult_profile(auth.uid());
+$$;
+create or replace function public.in_household(hid uuid, pid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from household_members where household_id = hid and user_id = pid);
+$$; 
+-- Does the logged-in user share any home with this profile?
+create or replace function public.shares_household(pid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from household_members a
+    join household_members b on b.household_id = a.household_id
+     where a.user_id = auth.uid() and b.user_id = pid);
+$$;
+create or replace function public.are_friends(a uuid, b uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from friendships
+   where status = 'accepted'
+    and least(requester, addressee) = least(a, b)
+    and greatest(requester, addressee) = greatest(a, b));
+$$;
+create or replace function public.can_act_as(pid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select pid = auth.uid()
+    or exists (select 1 from profiles c
+      join household_members m on m.user_id = c.id
+		where c.id = pid and c.account_type = 'child'
+          and public.is_adult_in(m.household_id));
+$$;
+create or replace function public.task_write_ok(owner uuid, hid uuid, vis text, assignee uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select
+    -- personal task: you (or your child); household task: an adult of that home
+    (case when hid is null then public.can_act_as(owner)
+          else public.is_adult_in(hid) and public.in_household(hid, owner) end)
+	-- tasks owned by or assigned to children can't be shared with friends or the public
+	and (vis = 'individual'
+		 or (public.is_adult_profile(owner)
+		  and (assignee is null or public.is_adult_profile(assignee))))
+	-- can only assign to the owner or someone in the same home
+	and (assignee is null or assignee = owner
+		 or (hid is not null and public.in_household(hid, assignee)));
+$$;
+-- Can the logged-in user see this task? (issue #23)
+create or replace function public.can_view_task(tid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+	select 1 from tasks t where t.id = tid and (
+		 public.can_act_as(t.owner_id)
+	  or (t.assigned_to is not null and public.can_act_as(t.assigned_to))
+	  or (t.household_id is not null and public.is_member(t.household_id))
+	  or (t.visibility = 'friends' and public.are_friends(t.owner_id, auth.uid()))
+	  or  t.visibility = 'public'));
+$$;
+create or replace function public.task_occurs_on(t public.tasks, d date)
+returns boolean language plpgsql stable set search_path = public as $$
+declare cur date;
+begin
+  if exists (select 1 from jsonb_each_text(t.rescheduled_dates) e where e.value::date = d) then
+	return true;
+  end if;
+  -- the instance on this date was moved away or skipped
+  if t.rescheduled_dates ? to_char(d, 'YYYY-MM-DD') then return false; end if;
+  if d = any(t.excluded_dates) then return false; end if;
+  if d < t.start_date or (t.end_date is not null and d > t.end_date) then return false; end if;
+  case t.recurrence
+	when 'none'   then return d = t.start_date;
+	when 'daily'  then return true;
+	when 'weekly' then return extract(dow from d)::smallint = any(t.allowed_days);
+	when 'monthly' then
+	  cur := t.start_date;
+	  while cur < d loop cur := (cur + interval '1 month')::date; end loop;
+	  return cur = d;
+  end case;
+  return false;
+end;
+$$; 
+create or replace function public.create_household(hname text)
+returns public.households language plpgsql security definer set search_path = public as $$
+declare h households;
+begin
+  if auth.uid() is null then raise exception 'You must be logged in'; end if;
+  if not is_adult_profile(auth.uid()) then raise exception 'Only adults can create a household'; end if;
+  if coalesce(trim(hname), '') = '' then raise exception 'Household name is required'; end if;
+  insert into households (name, created_by) values (trim(hname), auth.uid()) returning * into h;
+  insert into household_members (household_id, user_id, role) values (h.id, auth.uid(), 'admin');
+  return h;
+end;
+$$;
+create or replace function public.join_household(code text)
+returns public.households language plpgsql security definer set search_path = public as $$
+declare h households;
+begin
+  if auth.uid() is null then raise exception 'You must be logged in'; end if;
+  select * into h from households where invite_code = upper(trim(code));
+  if not found then raise exception 'Invalid invite code'; end if;
+  insert into household_members (household_id, user_id) values (h.id, auth.uid())
+  on conflict do nothing;
+  return h;
+end;
+$$;
+create or replace function public.create_child(hid uuid, child_name text, child_avatar text default null)
+returns public.profiles language plpgsql security definer set search_path = public as $$
+declare c profiles;
+begin
+  if not is_adult_in(hid) then raise exception 'Only adults of this household can add children'; end if;
+  if coalesce(trim(child_name), '') = '' then raise exception 'Name is required'; end if;
+  insert into profiles (display_name, avatar, account_type, has_login, created_by)
+  values (left(trim(child_name), 40), child_avatar, 'child', false, auth.uid())
+  returning * into c;
+  insert into household_members (household_id, user_id) values (hid, c.id);
+  return c;
+end;
+$$;
+create or replace function public.update_child(child_id uuid, child_name text default null, child_avatar text default null)
+returns public.profiles language plpgsql security definer set search_path = public as $$
+declare c profiles;
+begin
+  if child_id = auth.uid() or not can_act_as(child_id) then
+	raise exception 'You can only edit children in your household';
+  end if;
+  update profiles
+	 set display_name = coalesce(left(nullif(trim(child_name), ''), 40), display_name),
+		 avatar       = coalesce(child_avatar, avatar)
+   where id = child_id
+  returning * into c;
+  return c;
+end;
+$$;
+create or replace function public.delete_child(child_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if child_id = auth.uid() or not can_act_as(child_id) then
+	raise exception 'You can only remove children in your household';
+  end if;
+  if exists (select 1 from profiles where id = child_id and has_login) then
+	raise exception 'This child has their own login; remove them from the household instead';
+  end if;
+  delete from profiles where id = child_id;
+end;
+$$;
+ 
+-- Friends, adults only if needed to change we can change to child as well
+ 
+-- Returns 'sent', or 'accepted' if they had already sent you a request.
+create or replace function public.send_friend_request(code text)
+returns text language plpgsql security definer set search_path = public as $$
+declare target uuid; f friendships;
+begin
+  if auth.uid() is null then raise exception 'You must be logged in'; end if;
+  if not is_adult_profile(auth.uid()) then raise exception 'Only adult accounts can add friends'; end if;
+ 
+  select id into target from profiles where friend_code = upper(trim(code));
+  if target is null then raise exception 'No player with that friend code'; end if;
+  if target = auth.uid() then raise exception 'That is your own friend code'; end if;
+ 
+  select * into f from friendships
+   where least(requester, addressee) = least(auth.uid(), target)
+	 and greatest(requester, addressee) = greatest(auth.uid(), target);
+ 
+  if found then
+	if f.status = 'accepted' then raise exception 'You are already friends'; end if;
+	if f.requester = target then
+	  update friendships set status = 'accepted' where id = f.id;
+	  return 'accepted';
+	end if;
+	raise exception 'Friend request already sent';
+  end if;
+ 
+  insert into friendships (requester, addressee) values (auth.uid(), target);
+  return 'sent';
+end;
+$$;
+ 
+create or replace function public.respond_friend_request(request_id uuid, accept boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from friendships
+	 where id = request_id and addressee = auth.uid() and status = 'pending') then
+	raise exception 'Friend request not found';
+  end if;
+  if accept then
+	update friendships set status = 'accepted' where id = request_id;
+  else
+	delete from friendships where id = request_id;
+  end if;
+end;
+$$;
+ 
+-- Tasks
+-- Complete one task instance. as_profile = the child playing (or null = adult).
+-- Returns XP earned.
+create or replace function public.complete_task(tid uuid, on_date date, as_profile uuid default null)
+returns int language plpgsql security definer set search_path = public as $$
+declare t tasks; p uuid := coalesce(as_profile, auth.uid());
+begin
+  if auth.uid() is null then raise exception 'You must be logged in'; end if;
+  if not can_act_as(p) then raise exception 'You cannot play as that profile'; end if;
+  select * into t from tasks where id = tid for update;
+  if not found then raise exception 'Task not found'; end if;
+  if t.assigned_to is not null then
+	if t.assigned_to <> p then raise exception 'This task is assigned to someone else'; end if;
+  elsif not (p = t.owner_id or (t.household_id is not null and in_household(t.household_id, p))) then
+	raise exception 'You can only complete your own or your household''s tasks';
+  end if;
+  if on_date > current_date + 1 then raise exception 'You can''t complete a task in the future'; end if;
+  if not task_occurs_on(t, on_date) then raise exception 'This task is not scheduled on that date'; end if;
+  if exists (select 1 from task_completions where task_id = t.id and occurrence_date = on_date) then
+	raise exception 'Already completed for that date';
+  end if;
+  insert into task_completions (task_id, occurrence_date, profile_id, household_id, xp_earned)
+  values (t.id, on_date, p, t.household_id, t.xp_reward);
+  update profiles set xp = xp + t.xp_reward where id = p;
+  return t.xp_reward;
+end;
+$$;
+-- Un-tick a completed instance (TaskManager.SetTaskCompleted(..., false)).
+create or replace function public.undo_completion(tid uuid, on_date date)
+returns void language plpgsql security definer set search_path = public as $$
+declare c task_completions;
+begin
+  select * into c from task_completions where task_id = tid and occurrence_date = on_date;
+  if not found then raise exception 'That task is not completed on that date'; end if;
+  if not (can_act_as(c.profile_id) or (c.household_id is not null and is_adult_in(c.household_id))) then
+	raise exception 'You can''t undo someone else''s completion';
+  end if;
+ 
+  delete from task_completions where id = c.id;
+  update profiles set xp = greatest(0, xp - c.xp_earned) where id = c.profile_id;
+end;
+$$;
+ 
+-- Only logged-in players may call the game actions.
+do $$
+declare f text;
+begin
+  foreach f in array array[
+	'create_household(text)', 'join_household(text)',
+	'create_child(uuid, text, text)', 'update_child(uuid, text, text)', 'delete_child(uuid)',
+	'send_friend_request(text)', 'respond_friend_request(uuid, boolean)',
+	'complete_task(uuid, date, uuid)', 'undo_completion(uuid, date)']
+  loop
+	execute format('revoke execute on function public.%s from anon, public', f);
+	execute format('grant execute on function public.%s to authenticated', f);
+  end loop;
+end;
+$$;
+--RLS
+alter table public.profiles          enable row level security;
+alter table public.households        enable row level security;
+alter table public.household_members enable row level security;
+alter table public.friendships       enable row level security;
+alter table public.tasks             enable row level security;
+alter table public.task_completions  enable row level security;
+-- profiles: users, people in your homes, friends and friend requests.
+create policy "profiles: read" on public.profiles
+  for select to authenticated
+  using (
+	id = auth.uid()
+	or public.shares_household(id)
+	or exists (select 1 from public.friendships f
+	  where (f.requester = profiles.id and f.addressee = auth.uid())
+		or (f.addressee = profiles.id and f.requester = auth.uid()))
+  );
+create policy "profiles: update self" on public.profiles
+  for update to authenticated
+  using (id = auth.uid()) with check (id = auth.uid());
+revoke update on public.profiles from authenticated;
+grant  update (display_name, avatar) on public.profiles to authenticated;   -- not XP / type
+-- households
+create policy "households: members read" on public.households
+  for select to authenticated using (public.is_member(id));
+ 
+create policy "households: admins update" on public.households
+  for update to authenticated using (public.is_admin(id)) with check (public.is_admin(id));
+ 
+-- household_members
+create policy "members: read housemates" on public.household_members
+  for select to authenticated using (public.is_member(household_id));
+ 
+create policy "members: leave or admin removes" on public.household_members
+  for delete to authenticated using (user_id = auth.uid() or public.is_admin(household_id));
+ 
+-- friendships: see and delete (unfriend / cancel) your own
+create policy "friendships: read own" on public.friendships
+  for select to authenticated using (auth.uid() in (requester, addressee));
+create policy "friendships: delete own" on public.friendships
+  for delete to authenticated using (auth.uid() in (requester, addressee));
+-- tasks 
+create policy "tasks: read by visibility" on public.tasks
+  for select to authenticated
+  using (
+	   public.can_act_as(owner_id)
+	or (assigned_to is not null and public.can_act_as(assigned_to))
+	or (household_id is not null and public.is_member(household_id))
+	or (visibility = 'friends' and public.are_friends(owner_id, auth.uid()))
+	or  visibility = 'public'
+  );
+create policy "tasks: create" on public.tasks
+for insert to authenticated
+with check (public.can_act_as(owner_id)
+  and public.task_write_ok(owner_id, household_id, visibility, assigned_to));
+create policy "tasks: edit" on public.tasks
+for update to authenticated
+using (case when household_id is null then public.can_act_as(owner_id)
+  else public.is_adult_in(household_id) end)
+with check (public.task_write_ok(owner_id, household_id, visibility, assigned_to));
+create policy "tasks: delete" on public.tasks
+for delete to authenticated
+using (case when household_id is null then public.can_act_as(owner_id)
+  else public.is_adult_in(household_id) end);
+-- task_completions: visible if you can see the task
+create policy "completions: read" on public.task_completions
+for select to authenticated using (public.can_view_task(task_id));
+  
