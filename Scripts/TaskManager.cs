@@ -1,12 +1,25 @@
 //CONTAINS TaskManager, TaskInstanceViewModel, TaskInstanceState
+#nullable enable
 using Godot;
 using System;
 using System.Collections.Generic;
 
 namespace Cozytasks.Scripts;
 
-public class TaskManager
+public partial class TaskManager : Node
 {
+	public static TaskManager Instance { get; private set; }
+
+	// Godot signal to notify UI controls when task data changes
+	[Signal]
+	public delegate void TasksUpdatedEventHandler();
+
+	public override void _Ready()
+	{
+		Instance = this;
+	}
+	
+	
 	private Dictionary<Guid, TaskDefinition> _definitions = new();
 	
 	/// <summary>
@@ -14,6 +27,19 @@ public class TaskManager
 	/// </summary>
 	private Dictionary<(Guid DefinitionId, DateTime Date), TaskInstanceState> _instanceStates = new();
 
+	public void CreateTask(string title,  string description, string icon, List<TimeSpan> times, 
+		TimeSpan duration, bool isScheduled, RecurrencePattern pattern = RecurrencePattern.None, 
+		DateTime? startDate = null, DateTime? endDate = null, List<DayOfWeek>? weekdays = null)
+	{
+		TaskDefinition newTask = new TaskDefinition(title, description, icon, times, duration, 
+			isScheduled, pattern, startDate,  endDate, weekdays);
+		_definitions.Add(newTask.Id, newTask);
+		
+		//Need async database state changing to happen here
+		
+		EmitSignal(SignalName.TasksUpdated);
+	}
+	
 	/// <summary>
 	///Dynamically generates tasks
 	/// </summary> 
