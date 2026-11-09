@@ -132,7 +132,6 @@ create or replace function public.is_adult_in(hid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select public.is_member(hid) and public.is_adult_profile(auth.uid());
 $$;
--- Is this profile in this home?
 create or replace function public.in_household(hid uuid, pid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from household_members where household_id = hid and user_id = pid);
@@ -148,8 +147,8 @@ create or replace function public.are_friends(a uuid, b uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from friendships
    where status = 'accepted'
-      and least(requester, addressee) = least(a, b)
-      and greatest(requester, addressee) = greatest(a, b));
+    and least(requester, addressee) = least(a, b)
+    and greatest(requester, addressee) = greatest(a, b));
 $$;
 create or replace function public.can_act_as(pid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
