@@ -2,13 +2,16 @@
 
 [ext_resource type="TileSet" uid="uid://drgpspit7jhy2" path="res://RoomTileSet.tres" id="1_lio24"]
 [ext_resource type="Script" uid="uid://dsi1g21kno7pj" path="res://PlacementManager.cs" id="2_15fr2"]
+[ext_resource type="Script" uid="uid://bcj2x3kyxll7n" path="res://FurniturePlacementController.cs" id="3_3cdcv"]
 [ext_resource type="PackedScene" uid="uid://c2d6mxnnxu0uk" path="res://Scenes/player.tscn" id="3_nnote"]
+[ext_resource type="PackedScene" uid="uid://dnwqvqrknfs1" path="res://furniture.tscn" id="4_acr7p"]
+[ext_resource type="Script" uid="uid://523hbdjerde8" path="res://FurnitureCatalog.cs" id="6_um27s"]
 
 [node name="SmallHouse" type="Node2D" unique_id=732616647]
 position = Vector2(8, -24)
 
 [node name="Floor" type="TileMapLayer" parent="." unique_id=341818503]
-tile_map_data = PackedByteArray("AABHAEUAAQAJAAkAAAABAAEAAQAIAAgAAAAEAAEAAQAJAAkAAAAHAAEAAQAJAAkAAAABAAQAAQAJAAkAAAAEAAQAAQAJAAkAAAAHAAQAAQAJAAkAAAABAAcAAQAJAAkAAAAEAAcAAQAJAAkAAAAHAAcAAQAJAAkAAAAKAAEAAQAJAAgAAAAKAAQAAQAJAAkAAAAKAAcAAQAJAAkAAAD7/wEAAQAIAAgAAAD+/wEAAQAJAAgAAAANAAEAAQAJAAgAAAAQAAEAAQAKAAgAAAAAAAQAAQAJAAkAAAD+/wQAAQAJAAkAAAD+/wcAAQAJAAkAAAANAAQAAQAJAAkAAAANAAcAAQAJAAkAAAAQAAQAAQAJAAkAAAAQAAcAAQAJAAkAAAD7/wQAAQAIAAkAAAD7/wcAAQAIAAkAAAAEAPv/AQAIAAkAAAAEAP7/AQAIAAkAAAAHAPv/AQAJAAkAAAAHAP7/AQAJAAkAAAAEAPj/AQAJAAkAAAAHAPj/AQAJAAkAAAAKAPj/AQAJAAkAAAANAPX/AQAJAAkAAAAKAPX/AQAJAAkAAAAHAPX/AQAJAAkAAAAEAPX/AQAJAAkAAAABAPX/AQAJAAkAAAABAPj/AQAJAAkAAAANAPL/AQAKAAgAAAAKAPL/AQAJAAgAAAAHAPL/AQAJAAgAAAAEAPL/AQAJAAgAAAABAPL/AQAJAAgAAAD+//L/AQAIAAgAAAD+//X/AQAIAAkAAAD7/woAAQAJAAkAAAD7/w0AAQAJAAkAAAD+/woAAQAJAAkAAAD+/w0AAQAJAAkAAAABAAoAAQAJAAkAAAABAA0AAQAJAAkAAAAEAAoAAQAJAAkAAAAEAA0AAQAJAAkAAAAHAAoAAQAJAAkAAAAKAAoAAQAJAAkAAAANAAoAAQAJAAkAAAAQAAoAAQAJAAkAAAAQAA0AAQAJAAkAAAANAA0AAQAJAAkAAAAKAA0AAQAJAAkAAAAHAA0AAQAJAAkAAAA=")
+tile_map_data = PackedByteArray("AABHAEUAAQAJAAkAAAABAAEAAQAJAAgAAAAEAAEAAQAJAAkAAAAHAAEAAQAJAAkAAAABAAQAAQAJAAkAAAAEAAQAAQAJAAkAAAAHAAQAAQAJAAkAAAABAAcAAQAJAAkAAAAEAAcAAQAJAAkAAAAHAAcAAQAJAAkAAAAKAAEAAQAJAAgAAAAKAAQAAQAJAAkAAAAKAAcAAQAJAAkAAAD7/wEAAQAIAAgAAAD+/wEAAQAJAAgAAAANAAEAAQAJAAgAAAAQAAEAAQAKAAgAAAAAAAQAAQAJAAkAAAD+/wQAAQAJAAkAAAD+/wcAAQAJAAkAAAANAAQAAQAJAAkAAAANAAcAAQAJAAkAAAAQAAQAAQAJAAkAAAAQAAcAAQAJAAkAAAD7/wQAAQAIAAkAAAD7/wcAAQAIAAkAAAAEAPv/AQAIAAkAAAAEAP7/AQAIAAkAAAAHAPv/AQAJAAkAAAAHAP7/AQAJAAkAAAAEAPj/AQAJAAkAAAAHAPj/AQAJAAkAAAAKAPj/AQAJAAkAAAANAPX/AQAJAAkAAAAKAPX/AQAJAAkAAAAHAPX/AQAJAAkAAAAEAPX/AQAJAAkAAAABAPX/AQAJAAkAAAABAPj/AQAJAAkAAAANAPL/AQAKAAgAAAAKAPL/AQAJAAgAAAAHAPL/AQAJAAgAAAAEAPL/AQAJAAgAAAABAPL/AQAJAAgAAAD+//L/AQAIAAgAAAD+//X/AQAIAAkAAAD7/woAAQAJAAkAAAD7/w0AAQAJAAkAAAD+/woAAQAJAAkAAAD+/w0AAQAJAAkAAAABAAoAAQAJAAkAAAABAA0AAQAJAAkAAAAEAAoAAQAJAAkAAAAEAA0AAQAJAAkAAAAHAAoAAQAJAAkAAAAKAAoAAQAJAAkAAAANAAoAAQAJAAkAAAAQAAoAAQAJAAkAAAAQAA0AAQAJAAkAAAANAA0AAQAJAAkAAAAKAA0AAQAJAAkAAAAHAA0AAQAJAAkAAAA=")
 tile_set = ExtResource("1_lio24")
 
 [node name="Walls" type="TileMapLayer" parent="." unique_id=95796312]
@@ -18,11 +21,23 @@ tile_set = ExtResource("1_lio24")
 [node name="Furniture" type="Node2D" parent="." unique_id=318995256]
 position = Vector2(96, 88)
 
+[node name="PlacementManager" type="Node" parent="." unique_id=886103454 node_paths=PackedStringArray("Floor", "Walls")]
+script = ExtResource("2_15fr2")
+Floor = NodePath("../Floor")
+Walls = NodePath("../Walls")
+
+[node name="FurniturePlacementController" type="Node2D" parent="." unique_id=1673422678 node_paths=PackedStringArray("Catalog", "Placement", "FurnitureContainer")]
+script = ExtResource("3_3cdcv")
+Catalog = NodePath("../FurnitureCatalogue")
+Placement = NodePath("../PlacementManager")
+FurnitureContainer = NodePath("../Furniture")
+FurnitureScene = ExtResource("4_acr7p")
+
 [node name="PlayerSpawn" type="Marker2D" parent="." unique_id=915980011]
 position = Vector2(96, 88)
 
-[node name="PlacementManager" type="Node" parent="." unique_id=886103454]
-script = ExtResource("2_15fr2")
-
 [node name="Player" parent="." unique_id=403153313 instance=ExtResource("3_nnote")]
 position = Vector2(96, 80)
+
+[node name="FurnitureCatalogue" type="Node" parent="." unique_id=2086055814]
+script = ExtResource("6_um27s")
