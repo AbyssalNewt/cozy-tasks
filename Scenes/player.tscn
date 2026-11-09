@@ -16,10 +16,10 @@ script = ExtResource("1_v0iea")
 
 [node name="Appearance" type="Node2D" parent="Player" unique_id=1737545598]
 script = ExtResource("2_cvnsp")
-BodyPath = "uid://cxg1jsf8v3tdi"
-EyesPath = "uid://dulonxvs4cnu8"
-OutfitPath = "uid://irngbu2ohfil"
-HairstylePath = "uid://cm071ro35aofs"
+BodyPath = "uid://cfal1p52787i5"
+EyesPath = "uid://dukyqgj55ed52"
+OutfitPath = "uid://bc8fxhl2tncy7"
+HairstylePath = "uid://cjtn4w2jvctan"
 
 [node name="Body" type="AnimatedSprite2D" parent="Player/Appearance" unique_id=396841794]
 sprite_frames = SubResource("SpriteFrames_vgqql")
