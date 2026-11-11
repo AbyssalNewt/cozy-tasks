@@ -85,15 +85,15 @@ public partial class FurnitureCatalogUI : Control
 
 	private ScrollContainer BuildTabContent(string category, Dictionary<string, string> items)
 	{
-        var scroll = new ScrollContainer
-        {
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            SizeFlagsVertical = Control.SizeFlags.ExpandFill,
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            VerticalScrollMode = ScrollContainer.ScrollMode.Auto
-        };
+		var scroll = new ScrollContainer
+		{
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			VerticalScrollMode = ScrollContainer.ScrollMode.Auto
+		};
 
-        var container = new HFlowContainer
+		var container = new HFlowContainer
 		{
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			SizeFlagsVertical = SizeFlags.ExpandFill
@@ -111,7 +111,7 @@ public partial class FurnitureCatalogUI : Control
 			var button = new Button
 			{
 				CustomMinimumSize = new Vector2(90, 90),
-				Text = category + id[id.LastIndexOf('_')..],
+				Text = id,
 				Icon = texture,
 				ExpandIcon = true,
 				IconAlignment = HorizontalAlignment.Center,
@@ -128,6 +128,7 @@ public partial class FurnitureCatalogUI : Control
 	private void OnFurnitureClicked(string id)
 	{
 		GD.Print($"Picked furniture item: {id}");
+		GD.Print(Catalog.GetInteraction(id));
 		EmitSignal(SignalName.FurnitureSelected, id);
 	}
 }

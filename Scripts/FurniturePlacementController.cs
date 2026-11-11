@@ -115,6 +115,7 @@ public partial class FurniturePlacementController : Node2D
 
 		string id = furnitureIds[selectedIndex];
 		Texture2D texture = Catalog.GetFurnitureTexture(id);
+		Interaction interaction = Catalog.GetInteraction(id);
 
 		if (texture == null)
 		{
@@ -127,7 +128,7 @@ public partial class FurniturePlacementController : Node2D
 
 		Vector2I tileSize = Placement.Floor.TileSet.TileSize;
 
-		preview.Setup(id, texture, tileSize / 3);
+		preview.Setup(id, texture, tileSize / 3, interaction);
 		preview.SetPreview(false);
 
 		GD.Print($"Selected: {id}");
@@ -150,12 +151,6 @@ public partial class FurniturePlacementController : Node2D
 	{
 		if (preview == null)
 			return;
-
-		GD.Print(preview.OriginCell);
-		GD.Print(preview.PlacementSize);
-		GD.Print(Placement.ToTileCell(preview.OriginCell));
-		GD.Print(Placement.ToTileCell(preview.OriginCell+preview.PlacementSize));
-		GD.Print(Placement.Floor.GetCellSourceId(Placement.ToTileCell(preview.OriginCell)));
 
 		if (!Placement.CanPlace(
 			preview.OriginCell,

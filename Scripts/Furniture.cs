@@ -10,7 +10,7 @@ public partial class Furniture : Node2D
 	public string FurnitureId { get; private set; } = "";
 	public Vector2I PlacementSize { get; private set; }
 	public Vector2I OriginCell { get; set; }
-
+	public Interaction CurrentInteraction { get; private set; } = Interaction.NONE;	
 	public override void _Ready()
 	{
 		sprite = GetNode<Sprite2D>("Sprite2D");
@@ -20,7 +20,8 @@ public partial class Furniture : Node2D
 	public void Setup(
 		string id,
 		Texture2D texture,
-		Vector2I tileSize)
+		Vector2I tileSize,
+		Interaction interaction)
 	{
 		YSortEnabled = true;
 		FurnitureId = id;
@@ -34,7 +35,7 @@ public partial class Furniture : Node2D
 			0f,
 			-PlacementSize.Y * 16 // - texture.GetHeight()
 		);
-
+		CurrentInteraction = interaction;
 		GenerateCollision(texture);
 	}
 
