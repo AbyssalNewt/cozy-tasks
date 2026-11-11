@@ -37,7 +37,7 @@ public partial class FurniturePlacementController : Node2D
 		if (preview == null || Placement == null || Placement.Floor == null || Placement.Walls == null)
 			return;
 
-		Vector2 mousePosition = GetGlobalMousePosition();
+		Vector2 mousePosition = Placement.Floor.ToLocal(GetGlobalMousePosition());
 		Vector2I cell = Placement.GetGridPosition(mousePosition);
 
 		preview.OriginCell = cell;
@@ -60,10 +60,12 @@ public partial class FurniturePlacementController : Node2D
 			switch (key.Keycode)
 			{
 				case Key.F:
+					CancelPlacement();
 					StartNewFurniture(0);
 					break;
 
 				case Key.N:
+					CancelPlacement();
 					StartNewFurniture(1);
 					break;
 
@@ -124,12 +126,8 @@ public partial class FurniturePlacementController : Node2D
 		FurnitureContainer.AddChild(preview);
 
 		Vector2I tileSize = Placement.Floor.TileSet.TileSize;
-		Vector2 textureSize = texture.GetSize();
 
-		/// Temporary default footprint for all furniture.
-		Vector2I gridSize = new Vector2I(1, 1);
-
-		preview.Setup(id, texture, gridSize, tileSize);
+		preview.Setup(id, texture, tileSize / 3);
 		preview.SetPreview(false);
 
 		GD.Print($"Selected: {id}");
@@ -152,6 +150,12 @@ public partial class FurniturePlacementController : Node2D
 	{
 		if (preview == null)
 			return;
+
+		GD.Print(preview.OriginCell);
+		GD.Print(preview.PlacementSize);
+		GD.Print(Placement.ToTileCell(preview.OriginCell));
+		GD.Print(Placement.ToTileCell(preview.OriginCell+preview.PlacementSize));
+		GD.Print(Placement.Floor.GetCellSourceId(Placement.ToTileCell(preview.OriginCell)));
 
 		if (!Placement.CanPlace(
 			preview.OriginCell,

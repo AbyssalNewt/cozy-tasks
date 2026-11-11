@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://c4387y27fdjln"]
+
+[ext_resource type="Script" uid="uid://de1bsfsfhsrgh" path="res://Scripts/FurnitureCatalogUI.cs" id="1_hx4is"]
+[ext_resource type="Script" uid="uid://523hbdjerde8" path="res://Scripts/FurnitureCatalog.cs" id="2_pc8e1"]
+
+[node name="Control" type="Control" unique_id=1330224265 node_paths=PackedStringArray("Catalog", "MainTabContainer")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 192.0
+script = ExtResource("1_hx4is")
+Catalog = NodePath("Catalog")
+MainTabContainer = NodePath("TabContainer")
+
+[node name="Catalog" type="Node2D" parent="." unique_id=404789116]
+script = ExtResource("2_pc8e1")
+
+[node name="TabContainer" type="TabContainer" parent="." unique_id=1070226085]
+layout_mode = 0
+offset_right = 920.0
+offset_bottom = 512.0

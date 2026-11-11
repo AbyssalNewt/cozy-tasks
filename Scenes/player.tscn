@@ -9,12 +9,15 @@
 size = Vector2(24, 10)
 
 [node name="Player" type="Node2D" unique_id=403153313]
+y_sort_enabled = true
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1711769221]
+y_sort_enabled = true
 collision_layer = 2
 script = ExtResource("1_v0iea")
 
 [node name="Appearance" type="Node2D" parent="Player" unique_id=1737545598]
+position = Vector2(0, -47)
 script = ExtResource("2_cvnsp")
 BodyPath = "uid://cfal1p52787i5"
 EyesPath = "uid://dukyqgj55ed52"
@@ -33,7 +36,8 @@ sprite_frames = SubResource("SpriteFrames_vgqql")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=660772573]
 modulate = Color(0.19607843, 0.19607843, 1, 1)
 self_modulate = Color(0, 0, 1, 1)
-position = Vector2(0, 42)
+position = Vector2(0, -5)
 shape = SubResource("RectangleShape2D_cvnsp")
 
 [node name="Camera2D" type="Camera2D" parent="Player" unique_id=852348704]
+position = Vector2(0, -26)
