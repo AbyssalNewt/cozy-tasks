@@ -1,4 +1,5 @@
 
+using System;
 using Godot;
 
 public partial class Furniture : Node2D
@@ -19,32 +20,45 @@ public partial class Furniture : Node2D
 	public void Setup(
 		string id,
 		Texture2D texture,
-		Vector2I gridSize,
 		Vector2I tileSize)
 	{
+		YSortEnabled = true;
 		FurnitureId = id;
-		PlacementSize = gridSize;
-
-		Vector2 footprintSize = new Vector2(
-			gridSize.X * tileSize.X,
-			gridSize.Y * tileSize.Y
-		);
+		PlacementSize = new(Mathf.RoundToInt(texture.GetWidth() / 16f), 
+			Mathf.RoundToInt(Mathf.Clamp(texture.GetHeight() / 2f, 16f, 48f) / 16f));
 
 		sprite.Texture = texture;
 		sprite.Centered = false;
 
-		// Align the bottom-center of the sprite
-		// with the bottom-center of the footprint.
 		sprite.Position = new Vector2(
-			(footprintSize.X - texture.GetWidth()) / 2f
-				- tileSize.X / 2f,
-			footprintSize.Y - texture.GetHeight()
-				- tileSize.Y / 2f
+			0f,
+			-PlacementSize.Y * 16 // - texture.GetHeight()
 		);
 
 		GenerateCollision(texture);
 	}
 
+	private static Vector2I GetBottomLeftPixel(Image image)
+	{
+		if (image == null || image.IsEmpty())
+		{
+			return Vector2I.Zero;
+		}
+		int width = image.GetWidth();
+		int height = image.GetHeight();
+
+		for (int y = height - 1; y >= 0; y--)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				if (image.GetPixel(x, y).A > 0.1f)
+				{
+					return new Vector2I(x, y);
+				}
+			}
+		}
+		return Vector2I.Zero;
+	}
 	private void GenerateCollision(Texture2D texture)
 	{
 		// Clear previously generated polygons.
@@ -57,52 +71,26 @@ public partial class Furniture : Node2D
 			}
 		}
 
-		Image image = texture.GetImage();
+		float footprintWidth = PlacementSize.X * 16; 
+		float footprintHeight = PlacementSize.Y * 16;
 
-		if (image == null || image.IsEmpty())
-		{
-			GD.PushError(
-				$"Could not read image for {FurnitureId}"
-			);
-			return;
-		}
+		// Create a clean rectangular collision polygon matching the footprint bounds
+		CollisionPolygon2D collision = new CollisionPolygon2D();
+		collision.BuildMode = CollisionPolygon2D.BuildModeEnum.Solids;
 
-		// Create a mask from the image's alpha channel.
-		using Bitmap bitmap = new Bitmap();
+		collision.Polygon =
+		[
+			new(0, 0),
+			new(footprintWidth, 0),
+			new(footprintWidth, footprintHeight),
+			new(0, footprintHeight)
+		];
 
-		bitmap.CreateFromImageAlpha(image, 0.1f);
+		collision.Position = new(0, -footprintHeight / 2);
 
-		Rect2I rect = new Rect2I(
-			0, 0,
-			image.GetWidth(),
-			image.GetHeight()
-		);
+		body.AddChild(collision);
 
-		// Convert opaque regions into polygons.
-		var polygons = bitmap.OpaqueToPolygons(rect, 1.0f);
-
-		foreach (var points in polygons)
-		{
-			if (points.Length < 3)
-				continue;
-
-			CollisionPolygon2D collision =
-				new CollisionPolygon2D();
-
-			collision.BuildMode =
-				CollisionPolygon2D.BuildModeEnum.Solids;
-
-			collision.Polygon = points;
-
-			// Match the sprite's actual drawing position.
-			collision.Position = sprite.Position;
-
-			body.AddChild(collision);
-		}
-
-		GD.Print(
-			$"Generated {polygons.Count} polygons for {FurnitureId}"
-		);
+		GD.Print($"Generated footprint collision box for {FurnitureId}");
 	}
 
 	public void SetPreview(bool valid)
@@ -113,6 +101,9 @@ public partial class Furniture : Node2D
 
 		// Disable collision while moving furniture.
 		body.CollisionLayer = 0;
+
+		YSortEnabled = false; // Temporarily stop Y-sorting calculations
+		ZIndex = 2;         // Push to a high Z layer so it draws above everything
 	}
 
 	public void SetPlaced()
@@ -121,6 +112,9 @@ public partial class Furniture : Node2D
 
 		// Re-enable player collision.
 		body.CollisionLayer = 1;
+
+		ZIndex = 0;           // Reset to default drawing layer
+		YSortEnabled = true;  // Re-enable normal Y-sorting against the player
 	}
 
 	public bool ContainsPoint(Vector2 point)

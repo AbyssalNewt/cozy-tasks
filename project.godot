@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Cozy-tasks"
-run/main_scene="uid://bkgrsm7aram8"
+run/main_scene="uid://bjeqoueykv0db"
 config/features=PackedStringArray("4.7", "C#", "Mobile")
 config/icon="res://icon.svg"
 

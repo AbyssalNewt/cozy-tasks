@@ -11,6 +11,7 @@ public partial class PlacementManager : Node
 	private readonly HashSet<Vector2I> occupiedCells = new();
 
 	// Convert a global mouse position to grid coordinates.
+	// Convert a global mouse position to grid coordinates.
 	public Vector2I GetGridPosition(Vector2 globalPosition)
 	{
 		Vector2 localPosition = Floor.ToLocal(globalPosition);
@@ -22,17 +23,30 @@ public partial class PlacementManager : Node
 	{
 		return Floor.ToGlobal(Floor.MapToLocal(cell));
 	}
+	// Convert a 16px sub-grid cell to its origin cell coordinate.
+	public Vector2I ToTileCell(Vector2I subGridCell)
+	{
+		int anchorX = Floor.GetUsedRect().Position.X;
+		int anchorY = Floor.GetUsedRect().Position.Y;
 
+		float x = (subGridCell.X - anchorX + 1) / 3f;
+		float y = (subGridCell.Y - anchorY + 1) / 3f;
+
+		return new Vector2I(
+			(x>0? Mathf.FloorToInt(x) : Mathf.CeilToInt(x)) * 3 + anchorX,
+			(y>0? Mathf.FloorToInt(y) : Mathf.CeilToInt(y)) * 3 + anchorY
+		);
+	}	
 	// Check whether a grid cell contains a floor.
 	public bool HasFloor(Vector2I cell)
 	{
-		return Floor.GetCellSourceId(cell) != -1;
+		return Floor.GetCellTileData(ToTileCell(cell)) != null;
 	}
 
 	// Check whether a cell contains a blocking wall.
 	public bool HasWall(Vector2I cell)
 	{
-		return Walls.GetCellSourceId(cell) != -1;
+		return Walls.GetCellTileData(ToTileCell(cell)) != null;
 	}
 	
 	
@@ -95,7 +109,34 @@ public partial class PlacementManager : Node
 	            "PlacementManager: Walls TileMapLayer is not assigned!"
 			);
 		}
+		PrintFloorGrid();
 	}
+	public void PrintFloorGrid()
+{
+	if (Floor == null)
+	{
+		GD.PrintErr("Floor TileMapLayer is not assigned!");
+		return;
+	}
+
+	Rect2I rect = Floor.GetUsedRect();
+	GD.Print($"=== Floor Grid Map (Bounds: Pos {rect.Position}, Size {rect.Size}) ===");
+
+	for (int y = rect.Position.Y; y < rect.End.Y; y++)
+	{
+		string rowStr = "";
+		for (int x = rect.Position.X; x < rect.End.X; x++)
+		{
+			Vector2I tilePos = new Vector2I(x, y);
+			int sourceId = Floor.GetCellSourceId(tilePos);
+			
+			// 'F' if a floor tile exists, '.' if the cell is empty (-1)
+			rowStr += (sourceId != -1) ? "F " : ". ";
+		}
+		GD.Print($"[Y:{y,3}] {rowStr}");
+	}
+	GD.Print("==========================================================");
+}
 
 	// Free cells when moving or removing furniture.
 	public void FreeCells(Vector2I origin, Vector2I size)
