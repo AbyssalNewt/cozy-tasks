@@ -109,7 +109,7 @@ public partial class PlacementManager : Node
 	            "PlacementManager: Walls TileMapLayer is not assigned!"
 			);
 		}
-		PrintFloorGrid();
+		// PrintFloorGrid();
 	}
 	public void PrintFloorGrid()
 {

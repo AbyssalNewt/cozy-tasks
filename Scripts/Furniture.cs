@@ -20,7 +20,8 @@ public partial class Furniture : Node2D
 	public void Setup(
 		string id,
 		Texture2D texture,
-		Vector2I tileSize)
+		Vector2I tileSize,
+		Interaction interaction)
 	{
 		YSortEnabled = true;
 		FurnitureId = id;
@@ -34,6 +35,7 @@ public partial class Furniture : Node2D
 			0f,
 			-PlacementSize.Y * 16 // - texture.GetHeight()
 		);
+		CurrentInteraction = interaction;
 		GenerateCollision(texture);
 	}
 
