@@ -16,6 +16,28 @@ public partial class FurnitureCatalog : Node
 
 	public CatalogCategory Categories = new() { Name = "Furniture" };
 	public Dictionary<string, string> Furniture = new();
+	private static readonly Dictionary<string, Interaction> InteractionRegistry = new()
+	{
+		{ "BedsFront", Interaction.SLEEP },
+		{ "BedsL", Interaction.SLEEP },
+		{ "BedsR", Interaction.SLEEP },
+		{ "BunkBed", Interaction.SLEEP },
+		{ "DoubleBedsFront", Interaction.SLEEP },
+		{ "Sink", Interaction.WASH_SINK },
+		{ "Grill", Interaction.COOK },
+		{ "Stove", Interaction.COOK },
+		{ "Plates", Interaction.EAT },
+		{ "Washing Machine", Interaction.WASH_MACHINE }		
+	};
+
+	public Interaction GetInteraction(string id)
+	{
+		if (InteractionRegistry.TryGetValue(id[..id.LastIndexOf('_')], out var interaction))
+		{
+			return interaction;
+		}
+		return Interaction.NONE;
+	}
 	public override void _EnterTree()
 	{
 		Categories = new() { Name = "Furniture" };
@@ -40,7 +62,8 @@ public partial class FurnitureCatalog : Node
 				System.StringComparison.OrdinalIgnoreCase))
 				continue;
 
-			string id = Path.GetFileNameWithoutExtension(file);
+			string fileName = Path.GetFileNameWithoutExtension(file);  
+			string id = currentCategory.Name + fileName[fileName.LastIndexOf('_')..];
 			string path = folder.PathJoin(file);
 
 

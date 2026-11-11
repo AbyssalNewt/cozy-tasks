@@ -10,7 +10,7 @@ public partial class Furniture : Node2D
 	public string FurnitureId { get; private set; } = "";
 	public Vector2I PlacementSize { get; private set; }
 	public Vector2I OriginCell { get; set; }
-
+	public Interaction CurrentInteraction { get; private set; } = Interaction.NONE;	
 	public override void _Ready()
 	{
 		sprite = GetNode<Sprite2D>("Sprite2D");
@@ -34,7 +34,6 @@ public partial class Furniture : Node2D
 			0f,
 			-PlacementSize.Y * 16 // - texture.GetHeight()
 		);
-
 		GenerateCollision(texture);
 	}
 
