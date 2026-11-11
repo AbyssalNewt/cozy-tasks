@@ -8,7 +8,7 @@ public partial class TaskDefinition
 {
 	public Guid Id { get; set; } = Guid.NewGuid();
 	public string Title { get; set; }
-	public string Description { get; set; }
+	public string? Description { get; set; }
 	public int Reward { get; set; } 
 	public string Icon { get; set; }
 	
@@ -39,6 +39,13 @@ public partial class TaskDefinition
 		{
 			Rule = new RecurrenceRule(pattern, weekdays, times, startDate.Value);
 		}
+	}
+
+	public TaskDefinition()
+	{
+		Title = "";
+		Description = "";
+		Icon = "";
 	}
 	
 }	
