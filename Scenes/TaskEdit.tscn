@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://dp2d5bfljdqki"]
+
+[ext_resource type="Script" uid="uid://j6tooywq65vo" path="res://Scripts/TaskEdit.cs" id="1_gsa5p"]
+
+[node name="PanelContainer" type="PanelContainer" unique_id=273378357]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_gsa5p")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=693235887]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=2121537230]
+layout_mode = 2
+
+[node name="Title" type="LineEdit" parent="MarginContainer/VBoxContainer" unique_id=1753250677]
+layout_mode = 2
+
+[node name="Description" type="TextEdit" parent="MarginContainer/VBoxContainer" unique_id=709089566]
+layout_mode = 2
+
+[node name="Duration" type="SpinBox" parent="MarginContainer/VBoxContainer" unique_id=1764274862]
+layout_mode = 2
+
+[node name="Pattern" type="OptionButton" parent="MarginContainer/VBoxContainer" unique_id=908274520]
+layout_mode = 2
+
+[node name="Delete" type="Button" parent="MarginContainer/VBoxContainer" unique_id=560174338]
+layout_mode = 2
+
+[node name="Save" type="Button" parent="MarginContainer/VBoxContainer" unique_id=2056241064]
+layout_mode = 2

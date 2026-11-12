@@ -236,11 +236,16 @@ public partial class TaskManager : Node
 			IsCompleted = completed,
 			IsRescheduled = isRescheduled,
 			Description = def.Description,
-			Duration = def.Duration
+			Duration = def.Duration,
+			Rule = def.Rule,
+			Reward = def.Reward
 		};
 	}
 
-	
+	public IReadOnlyDictionary<Guid, TaskDefinition> GetAllDefinitions()
+	{
+		return _definitions;
+	}
 }
 /// <summary>
 /// Contains altered state data of an instance of a task. Subject to expansion.
@@ -262,4 +267,6 @@ public class TaskInstanceViewModel
 	public bool IsRescheduled { get; set; }
 	public String? Description { get; set; }
 	public TimeSpan Duration { get; set; }
+	public RecurrenceRule? Rule { get; set; }
+	public int Reward { set; get; }
 }

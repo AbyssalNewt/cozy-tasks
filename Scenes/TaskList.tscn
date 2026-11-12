@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://dndi5a8x26v5v"]
+
+[ext_resource type="Script" uid="uid://cj78yyv7qpf01" path="res://Scripts/TaskListView.cs" id="1_qqfr0"]
+[ext_resource type="PackedScene" uid="uid://dpe5h2yapp5po" path="res://Scenes/TaskRow.tscn" id="2_vmo41"]
+[ext_resource type="Script" uid="uid://dcuvc30h1xs07" path="res://Scripts/TaskListController.cs" id="3_14whs"]
+
+[node name="Control" type="Control" unique_id=973778090]
+layout_mode = 3
+anchors_preset = 0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_14whs")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=440341045 node_paths=PackedStringArray("_listContainer")]
+layout_mode = 0
+offset_right = 1004.61523
+offset_bottom = 503.01532
+script = ExtResource("1_qqfr0")
+_taskRowScene = ExtResource("2_vmo41")
+_listContainer = NodePath("VBoxContainer")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ScrollContainer" unique_id=906965297]
+layout_mode = 2
