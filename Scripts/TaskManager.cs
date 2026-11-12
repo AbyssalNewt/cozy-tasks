@@ -130,6 +130,23 @@ public partial class TaskManager : Node
 		
 		EmitSignal(SignalName.TasksUpdated);
 	}
+
+	/// <summary>
+	/// Ideally, this is used only for deleting non-recurring, non-scheduled tasks. Deleting a recurring task
+	/// will remove completed past instances as well. Be careful with where this function is called through UI.
+	/// </summary>
+	public bool DeleteTask(Guid taskId)
+	{
+		if (!_definitions.ContainsKey(taskId)) return false;
+		
+		_definitions.Remove(taskId);
+		
+		// Need async 
+
+		EmitSignal(SignalName.TasksUpdated);
+		
+		return true;
+	}
 	
 	/// <summary>
 	/// Cancels an instance of a task, causing it not to appear on the calendar when GetMonthViewInstances is called.
