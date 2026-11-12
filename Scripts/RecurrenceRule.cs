@@ -23,7 +23,12 @@ public class RecurrenceRule
 		AllowedDays = weekDays;
 		Times = times;
 	}
-	
+
+	public RecurrenceRule()
+	{
+		
+	}
+
 	public RecurrencePattern Pattern { get; set; }	//recurrence category
 	public List<DayOfWeek> AllowedDays { get; set; } = [];	//days of the week which a task occurs
 	public DateTime StartDate { get; set; } //the starting window of a scheduled task, doesn't need HR:MIN:SEC
