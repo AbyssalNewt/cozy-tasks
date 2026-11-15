@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
- 
+using Cozytasks.Scripts; 
 
 public class DbResult<T>
 {
@@ -78,28 +78,33 @@ public class TaskRecord
 	public string Description { get; set; }
 	public int XpReward { get; set; } = 10;
 	public int DurationMinutes { get; set; }
+	public string Icon { get; set; }
+	pubic bool IsScheduled { get; set; } = true;
  
 	public string Recurrence { get; set; } = "none";   // none, daily, weekly, monthly
 	public List<int> AllowedDays { get; set; } = new(); // 0 = Sunday ... 6 = Saturday
+	public List<TimeSpan> Times { get; set; } = new();
 	public DateOnly StartDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 	public DateOnly? EndDate { get; set; }
-	public List<DateOnly> ExcludedDates { get; set; } = new();
+	public List<DateTime> ExcludedDates { get; set; } = new();
 	public Dictionary<string, string> RescheduledDates { get; set; } = new();  // "yyyy-MM-dd" -> "yyyy-MM-dd"
  
 	public Profile Owner { get; set; }        // only DisplayName (null if you can't see them)
 	public Profile Assignee { get; set; }     // only DisplayName
  
-	private const string DateFormat = "yyyy-MM-dd";
+	private const string DateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss";
  
 	/// Converts to the game's TaskDefinition (Id stays the same as the database id).
 	public TaskDefinition ToDefinition() => new TaskDefinition
 	{
 		Id = Id,
-		Title = Title,
+		Title = Title ?? "",
 		Description = Description,
+		Icon = Icon ?? "",
 		Reward = XpReward,
 		Duration = TimeSpan.FromMinutes(DurationMinutes),
-		Rule = new RecurrenceRule
+		IsScheduled = IsScheduled,
+		Rule = !IsScheduled ? null : new RecurrenceRule
 		{
 			Pattern = Recurrence switch
 			{
@@ -109,36 +114,44 @@ public class TaskRecord
 				_ => RecurrencePattern.None,
 			},
 			AllowedDays = AllowedDays.Select(d => (DayOfWeek)d).ToList(),
-			StartDate = ToDateTime(StartDate),
-			EndDate = EndDate.HasValue ? ToDateTime(EndDate.Value) : null,
-			ExcludedDates = ExcludedDates.Select(ToDateTime).ToHashSet(),
+			Times = Times.ToList(),
+			StartDate = StartDate.ToDateTime(TimeOnly.MinValue),
+			EndDate = EndDate?.ToDateTime(TimeOnly.MinValue),
+			ExcludedDates = ExcludedDates.ToHashSet(),
 			RescheduledDates = RescheduledDates.ToDictionary(
-				kv => ParseDate(kv.Key),
-				kv => ParseDate(kv.Value)),
+				kv => ParseDateTime(kv.Key),
+				kv => ParseDateTime(kv.Value)),
 		},
 	};
  
 	/// Builds a record from a TaskDefinition so it can be saved.
 	public static TaskRecord FromDefinition(TaskDefinition def, string visibility = global::Visibility.Individual,
-		Guid? householdId = null, Guid? assignedTo = null) => new TaskRecord
+		Guid? householdId = null, Guid? assignedTo = null)
 	{
-		Id = def.Id,
-		HouseholdId = householdId,
-		Visibility = visibility,
-		AssignedTo = assignedTo,
-		Title = def.Title,
-		Description = def.Description,
-		XpReward = def.Reward,
-		DurationMinutes = (int)def.Duration.TotalMinutes,
-		Recurrence = def.Rule.Pattern.ToString().ToLowerInvariant(),
-		AllowedDays = def.Rule.AllowedDays.Select(d => (int)d).ToList(),
-		StartDate = DateOnly.FromDateTime(def.Rule.StartDate),
-		EndDate = def.Rule.EndDate.HasValue ? DateOnly.FromDateTime(def.Rule.EndDate.Value) : null,
-		ExcludedDates = def.Rule.ExcludedDates.Select(DateOnly.FromDateTime).ToList(),
-		RescheduledDates = def.Rule.RescheduledDates.ToDictionary(
-			kv => kv.Key.ToString(DateFormat, CultureInfo.InvariantCulture),
-			kv => kv.Value.ToString(DateFormat, CultureInfo.InvariantCulture)),
-	};
+		RecurrenceRule rule = def.Rule;   // null when the task isn't scheduled
+		return new TaskRecord
+		{
+			Id = def.Id,
+			HouseholdId = householdId,
+			Visibility = visibility,
+			AssignedTo = assignedTo,
+			Title = def.Title,
+			Description = def.Description,
+			Icon = def.Icon,
+			XpReward = def.Reward,
+			DurationMinutes = (int)def.Duration.TotalMinutes,
+			IsScheduled = def.IsScheduled && rule != null,
+			Recurrence = rule?.Pattern.ToString().ToLowerInvariant() ?? "none",
+			AllowedDays = rule?.AllowedDays.Select(d => (int)d).ToList() ?? new(),
+			Times = rule?.Times.ToList() ?? new(),
+			StartDate = DateOnly.FromDateTime(rule?.StartDate ?? DateTime.Today),
+			EndDate = rule?.EndDate is DateTime end ? DateOnly.FromDateTime(end) : null,
+			ExcludedDates = rule?.ExcludedDates.ToList() ?? new(),
+			RescheduledDates = rule?.RescheduledDates.ToDictionary(
+				kv => kv.Key.ToString(DateTimeFormat, CultureInfo.InvariantCulture),
+				kv => kv.Value.ToString(DateTimeFormat, CultureInfo.InvariantCulture)) ?? new(),
+		};
+	}
 	/// Only the columns that get saved (used internally by Db.cs).
 	internal Dictionary<string, object> ToWrite(bool includeId)
 	{
@@ -151,27 +164,29 @@ public class TaskRecord
 			["description"] = Description,
 			["xp_reward"] = XpReward,
 			["duration_minutes"] = DurationMinutes,
+			["icon"] = Icon,
+			["is_scheduled"] = IsScheduled,
 			["recurrence"] = Recurrence,
 			["allowed_days"] = AllowedDays,
+			["times"] = Times.Select(t => t.ToString(@"hh\:mm\:ss",CultureInfo.InvariantCulture)).ToList(),
 			["start_date"] = StartDate,
 			["end_date"] = EndDate,
-			["excluded_dates"] = ExcludedDates,
+			["excluded_dates"] = ExcludedDates.Select(d => d.ToString(DateTimeFormat, CultureInfo.InvariantCulture)).ToList(),
 			["rescheduled_dates"] = RescheduledDates,
 		};
 		if (includeId && Id != Guid.Empty) row["id"] = Id;
 		if (OwnerId != Guid.Empty) row["owner_id"] = OwnerId;
 		return row;
 	}
-	private static DateTime ToDateTime(DateOnly d) => d.ToDateTime(TimeOnly.MinValue);
-	private static DateTime ParseDate(string s) =>
-		DateOnly.ParseExact(s, DateFormat, CultureInfo.InvariantCulture).ToDateTime(TimeOnly.MinValue);
+	private static DateTime ParseDateTime(string s) =>
+		DateTime.Parse(s, CultureInfo.InvariantCulture, DateTimeStyles.None);
 }
 /// One completed task instance (who did which task on which day).
 
 public class TaskCompletion
 {
 	public Guid TaskId { get; set; }
-	public DateOnly OccurrenceDate { get; set; }
+	public DateTime OccurrenceAt { get; set; }
 	public Guid ProfileId { get; set; }
 	public int XpEarned { get; set; }
 	public DateTime CompletedAt { get; set; }
