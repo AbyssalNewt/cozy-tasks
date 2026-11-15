@@ -79,7 +79,7 @@ public class TaskRecord
 	public int XpReward { get; set; } = 10;
 	public int DurationMinutes { get; set; }
 	public string Icon { get; set; }
-	pubic bool IsScheduled { get; set; } = true;
+	public bool IsScheduled { get; set; } = true;
  
 	public string Recurrence { get; set; } = "none";   // none, daily, weekly, monthly
 	public List<int> AllowedDays { get; set; } = new(); // 0 = Sunday ... 6 = Saturday
