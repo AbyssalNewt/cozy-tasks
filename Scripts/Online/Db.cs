@@ -186,7 +186,7 @@ public partial class Db : Node
  
 
 	public Task<DbResult<JsonElement>> UndoCompletionAsync(Guid taskId, DateTime when) =>
-		Rpc<JsonElement>("undo_completion", new { tid = taskId, at_time = DateTimetring(when) });
+		Rpc<JsonElement>("undo_completion", new { tid = taskId, at_time = DateTimeString(when) });
  
 	/// Which instances of these tasks are completed between two dates
 	/// (use it to fill TaskManager's completed state for the month view).
