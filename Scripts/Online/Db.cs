@@ -181,12 +181,12 @@ public partial class Db : Node
  
 	public Task<DbResult<JsonElement>> DeleteTaskAsync(Guid taskId) =>
 		Send<JsonElement>(HttpMethod.Delete, $"/rest/v1/tasks?id=eq.{taskId}");
-	public Task<DbResult<int>> CompleteTaskAsync(Guid taskId, DateTime date) =>
-		Rpc<int>("complete_task", new { tid = taskId, on_date = DateString(date), as_profile = PlayingAsId });
+	public Task<DbResult<int>> CompleteTaskAsync(Guid taskId, DateTime when) =>
+		Rpc<int>("complete_task", new { tid = taskId, at_time = DateTimeString(when), as_profile = PlayingAsId });
  
 
-	public Task<DbResult<JsonElement>> UndoCompletionAsync(Guid taskId, DateTime date) =>
-		Rpc<JsonElement>("undo_completion", new { tid = taskId, on_date = DateString(date) });
+	public Task<DbResult<JsonElement>> UndoCompletionAsync(Guid taskId, DateTime when) =>
+		Rpc<JsonElement>("undo_completion", new { tid = taskId, at_time = DateTimetring(when) });
  
 	/// Which instances of these tasks are completed between two dates
 	/// (use it to fill TaskManager's completed state for the month view).
@@ -197,19 +197,19 @@ public partial class Db : Node
 			return Task.FromResult(new DbResult<List<TaskCompletion>> { Ok = true, Data = new() });
 		return Send<List<TaskCompletion>>(HttpMethod.Get,
 			$"/rest/v1/task_completions?task_id=in.({ids})"
-			+ $"&occurrence_date=gte.{DateString(from)}&occurrence_date=lte.{DateString(to)}"
-			+ "&select=task_id,occurrence_date,profile_id,xp_earned,completed_at");
+			+ $"&occurrence_at=gte.{DateString(from)}T00:00:00&occurrence_at=lt.{DateString(to.AddDays(1))}T00:00:00"
+			+ "&select=task_id,occurrence_at,profile_id,xp_earned,completed_at");
 	}
 	/// Household activity feed: who completed what, newest first.
 	public Task<DbResult<List<TaskCompletion>>> GetActivityAsync(Guid householdId, int limit = 20) =>
 		Send<List<TaskCompletion>>(HttpMethod.Get,
 			$"/rest/v1/task_completions?household_id=eq.{householdId}"
-			+ "&select=task_id,occurrence_date,profile_id,xp_earned,completed_at,task:tasks(title),profile:profiles(display_name)"
+			+ "&select=task_id,occurrence_at,profile_id,xp_earned,completed_at,task:tasks(title),profile:profiles(display_name)"
 			+ $"&order=completed_at.desc&limit={limit}");
 	private Task<DbResult<List<TaskRecord>>> GetTasks(string filter) =>
 		Send<List<TaskRecord>>(HttpMethod.Get, $"/rest/v1/tasks?{filter}&{TaskSelect}&order=start_date.asc,created_at.asc");
 	private static string DateString(DateTime d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
- 
+	private static string DateTimeString(DateTime d) => d.ToString("yyyy-MM-dd'T'HH:mm:ss",CultureInfo.InvariantCulture);
 	private Task<DbResult<T>> Rpc<T>(string function, object args) =>
 		Send<T>(HttpMethod.Post, "/rest/v1/rpc/" + function, args);
  
