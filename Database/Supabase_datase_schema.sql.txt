@@ -443,4 +443,126 @@ using (case when household_id is null then public.can_act_as(owner_id)
 -- task_completions: visible if you can see the task
 create policy "completions: read" on public.task_completions
 for select to authenticated using (public.can_view_task(task_id));
-  
+
+
+
+
+-- New query to match Mason TaskDefinition Icon times and IsSchedule
+
+
+
+alter table public.tasks
+  add column if not exists icon text,
+  add column if not exists is_scheduled boolean not null default true,
+  add column if not exists times time[]  not null default '{}';
+alter table public.tasks alter column excluded_dates drop default;
+alter table public.tasks
+  alter column excluded_dates type timestamp[] using excluded_dates::timestamp[];
+alter table public.tasks alter column excluded_dates set default '{}';
+
+alter table public.task_completions add column occurrence_at timestamp;
+update public.task_completions set occurrence_at = occurrence_date::timestamp;
+alter table public.task_completions alter column occurrence_at set not null;
+alter table public.task_completions drop column occurrence_date;   -- also drops the old unique rule
+alter table public.task_completions
+  add constraint task_completions_task_occurrence_key unique (task_id, occurrence_at);
+ 
+drop function if exists public.task_occurs_on(public.tasks, date);
+ 
+-- Does the rule hit this day? (exactly like RecurrenceRule.GetOccurrences)
+create or replace function public.task_date_matches(t public.tasks, d date)
+returns boolean language plpgsql stable set search_path = public as $$
+declare cur date;
+begin
+  if d < t.start_date or (t.end_date is not null and d > t.end_date) then return false; end if;
+  case t.recurrence
+    when 'none'   then return d = t.start_date;
+    when 'daily'  then return true;
+    when 'weekly' then return extract(dow from d)::smallint = any(t.allowed_days);
+    when 'monthly' then
+      cur := t.start_date;
+      while cur < d loop cur := (cur + interval '1 month')::date; end loop;
+      return cur = d;
+  end case;
+  return false;
+end;
+$$;
+create or replace function public.task_instance_at(t public.tasks, ts timestamp)
+returns boolean language plpgsql stable set search_path = public as $$
+begin
+  if not t.is_scheduled then return true; end if;   -- unscheduled tasks: any time
+  if exists (select 1 from jsonb_each_text(t.rescheduled_dates) e where e.value::timestamp = ts) then
+    return true;
+  end if;
+  if exists (select 1 from jsonb_object_keys(t.rescheduled_dates) k where k::timestamp = ts) then
+    return false;
+  end if;
+  if ts = any(t.excluded_dates) then return false; end if;
+  return public.task_date_matches(t, ts::date) and ts::time = any(t.times);
+end;
+$$;
+-- Used when the game sends a date with no time
+create or replace function public.task_has_instance_on(t public.tasks, d date)
+returns boolean language sql stable set search_path = public as $$
+  select not t.is_scheduled
+      or exists (select 1 from unnest(t.times) tm where public.task_instance_at(t, d + tm))
+      or exists (select 1 from jsonb_each_text(t.rescheduled_dates) e where e.value::timestamp::date = d);
+$$;
+drop function if exists public.complete_task(uuid, date, uuid);
+drop function if exists public.undo_completion(uuid, date);
+ 
+-- at_time = the instance's date + time
+-- If you send just a date (time 00:00), it counts if the task happens that day.
+create or replace function public.complete_task(tid uuid, at_time timestamp, as_profile uuid default null)
+returns int language plpgsql security definer set search_path = public as $$
+declare t tasks; p uuid := coalesce(as_profile, auth.uid());
+begin
+  if auth.uid() is null then raise exception 'You must be logged in'; end if;
+  if not can_act_as(p) then raise exception 'You cannot play as that profile'; end if;
+ 
+  select * into t from tasks where id = tid for update;
+  if not found then raise exception 'Task not found'; end if;
+ 
+  if t.assigned_to is not null then
+    if t.assigned_to <> p then raise exception 'This task is assigned to someone else'; end if;
+  elsif not (p = t.owner_id or (t.household_id is not null and in_household(t.household_id, p))) then
+    raise exception 'You can only complete your own or your household''s tasks';
+  end if;
+ 
+  if at_time::date > current_date + 1 then raise exception 'You can''t complete a task in the future'; end if;
+ 
+  if not task_instance_at(t, at_time)
+     and not (at_time::time = '00:00' and task_has_instance_on(t, at_time::date)) then
+    raise exception 'This task is not scheduled at that time';
+  end if;
+ 
+  if exists (select 1 from task_completions where task_id = t.id and occurrence_at = at_time) then
+    raise exception 'Already completed';
+  end if;
+ 
+  insert into task_completions (task_id, occurrence_at, profile_id, household_id, xp_earned)
+  values (t.id, at_time, p, t.household_id, t.xp_reward);
+  update profiles set xp = xp + t.xp_reward where id = p;
+  return t.xp_reward;
+end;
+$$; 
+create or replace function public.undo_completion(tid uuid, at_time timestamp)
+returns void language plpgsql security definer set search_path = public as $$
+declare c task_completions;
+begin
+  select * into c from task_completions where task_id = tid and occurrence_at = at_time;
+  if not found then raise exception 'That task is not completed at that time'; end if;
+  if not (can_act_as(c.profile_id) or (c.household_id is not null and is_adult_in(c.household_id))) then
+    raise exception 'You can''t undo someone else''s completion';
+  end if;
+ 
+  delete from task_completions where id = c.id;
+  update profiles set xp = greatest(0, xp - c.xp_earned) where id = c.profile_id;
+end;
+$$;
+ 
+revoke execute on function public.complete_task(uuid, timestamp, uuid) from anon, public;
+revoke execute on function public.undo_completion(uuid, timestamp)     from anon, public;
+grant  execute on function public.complete_task(uuid, timestamp, uuid) to authenticated;
+grant  execute on function public.undo_completion(uuid, timestamp)     to authenticated;
+ 
