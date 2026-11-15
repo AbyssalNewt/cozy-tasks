@@ -182,11 +182,11 @@ public partial class Db : Node
 	public Task<DbResult<JsonElement>> DeleteTaskAsync(Guid taskId) =>
 		Send<JsonElement>(HttpMethod.Delete, $"/rest/v1/tasks?id=eq.{taskId}");
 	public Task<DbResult<int>> CompleteTaskAsync(Guid taskId, DateTime when) =>
-		Rpc<int>("complete_task", new { tid = taskId, at_time = DateString(when), as_profile = PlayingAsId });
+		Rpc<int>("complete_task", new { tid = taskId, at_time = DateTimeString(when), as_profile = PlayingAsId });
  
 
 	public Task<DbResult<JsonElement>> UndoCompletionAsync(Guid taskId, DateTime when) =>
-		Rpc<JsonElement>("undo_completion", new { tid = taskId, at_time = DateString(when) });
+		Rpc<JsonElement>("undo_completion", new { tid = taskId, at_time = DateSTimetring(when) });
  
 	/// Which instances of these tasks are completed between two dates
 	/// (use it to fill TaskManager's completed state for the month view).
@@ -197,7 +197,7 @@ public partial class Db : Node
 			return Task.FromResult(new DbResult<List<TaskCompletion>> { Ok = true, Data = new() });
 		return Send<List<TaskCompletion>>(HttpMethod.Get,
 			$"/rest/v1/task_completions?task_id=in.({ids})"
-			+ $"&occurrence_at=gte.{DateString(from)}T00:00:00&occurrence_at=lte.{DateString(to.AddDays(1))}T00:00:00"
+			+ $"&occurrence_at=gte.{DateString(from)}T00:00:00&occurrence_at=lt.{DateString(to.AddDays(1))}T00:00:00"
 			+ "&select=task_id,occurrence_at,profile_id,xp_earned,completed_at");
 	}
 	/// Household activity feed: who completed what, newest first.
