@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Cozytasks.Scripts; 
 
+
 public class DbResult<T>
 {
 	public bool Ok { get; set; }
